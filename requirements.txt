@@ -19,6 +19,7 @@ PySide6==6.10.0
 PySide6_Addons==6.10.0
 PySide6_Essentials==6.10.0
 python-dateutil==2.9.0.post0
+python-dotenv==1.2.1
 pytz==2025.2
 pywin32-ctypes==0.2.3
 reportlab==4.4.4
