@@ -1,7 +1,6 @@
 from decimal import Decimal, ROUND_HALF_UP
 
 from django.contrib import admin
-from django.db.models import Prefetch
 
 from .models import (
     BuchungsTyp,
@@ -164,12 +163,19 @@ class RestplatteAdmin(admin.ModelAdmin):
     inlines = (RestplatteBuchungInline,)
     ordering = ("code", "regal", "platz")
 
+    # ✅ wichtig: code ist non-editable -> NICHT direkt in fieldsets verwenden!
+    readonly_fields = ("code_anzeige",)
+
     fieldsets = (
-        ("Zuordnung", {"fields": ("stamm", "code")}),
+        ("Zuordnung", {"fields": ("stamm", "code_anzeige")}),
         ("Maße (Pflicht)", {"fields": ("laenge_mm", "breite_mm")}),
         ("Lagerplatz (Pflicht)", {"fields": ("regal", "platz")}),
         ("Notiz", {"fields": ("bemerkung",)}),
     )
+
+    def code_anzeige(self, obj):
+        return getattr(obj, "code", "")
+    code_anzeige.short_description = "Code"
 
     def format_anzeige(self, obj):
         return f"{obj.laenge_mm} x {obj.breite_mm} mm"
@@ -181,13 +187,11 @@ class RestplatteAdmin(admin.ModelAdmin):
     qm_anzeige.short_description = "m²"
 
     def preis_eur_pro_qm_anzeige(self, obj):
-        # aus Stamm ziehen, egal ob Feld oder Methode
         stamm_preis = val(obj.stamm, "preis_eur_pro_qm")
         return f"{dec2(stamm_preis)} € / m²"
     preis_eur_pro_qm_anzeige.short_description = "€/m² (Stamm)"
 
     def restpreis_anzeige(self, obj):
-        # WICHTIG: hier NICHT über DB rechnen -> sauber Decimal!
         qm = qm_from_mm(obj.laenge_mm, obj.breite_mm)
         stamm_preis = val(obj.stamm, "preis_eur_pro_qm")
         return money((qm * stamm_preis).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
@@ -206,7 +210,6 @@ class RestplatteAdmin(admin.ModelAdmin):
     bestand_verfuegbar.short_description = "Verfügbar (Stk)"
 
     def lagerwert(self, obj):
-        # physisch * restpreis
         qm = qm_from_mm(obj.laenge_mm, obj.breite_mm)
         stamm_preis = val(obj.stamm, "preis_eur_pro_qm")
         preis_rest = (qm * stamm_preis).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
